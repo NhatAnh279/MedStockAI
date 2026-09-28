@@ -91,6 +91,22 @@ def template_rationale(item_name: str, supplier_name: str, qty: int, fc: dict[st
     return " ".join(parts)
 
 
+def _round_fc(fc: dict[str, Any]) -> dict[str, Any]:
+    """Return a shallow copy of a forecast dict with key numeric fields rounded to integers."""
+    d = dict(fc)
+    demand = dict(d.get("demand", {}))
+    for k in ("A_scheduled", "B_baseline", "C_new_intake", "total"):
+        if k in demand:
+            demand[k] = round(demand[k])
+    d["demand"] = demand
+    for k in ("usable_stock", "ROP", "order_qty", "qty_on_order"):
+        if k in d and d[k] is not None:
+            d[k] = round(d[k])
+    if d.get("days_until_stockout") is not None:
+        d["days_until_stockout"] = round(d["days_until_stockout"])
+    return d
+
+
 def generate_rationale(item_name: str, supplier_name: str, qty: int, fc: dict[str, Any]) -> str:
     """Short human-readable justification for one PO line."""
     fallback = template_rationale(item_name, supplier_name, qty, fc)
@@ -99,7 +115,7 @@ def generate_rationale(item_name: str, supplier_name: str, qty: int, fc: dict[st
         "for a pharmacist reviewing this purchase order line. Use ONLY the figures below, "
         "do not invent or recompute numbers, and do not use markdown.\n\n"
         f"Item: {item_name}\nSupplier: {supplier_name}\nOrder quantity: {qty}\n"
-        f"Forecast data (JSON): {json.dumps(fc, default=str)}"
+        f"Forecast data (JSON): {json.dumps(_round_fc(fc), default=str)}"
     )
     return _complete(prompt, max_tokens=220) or fallback
 

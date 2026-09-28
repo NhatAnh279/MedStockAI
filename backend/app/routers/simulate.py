@@ -21,10 +21,21 @@ from app.schemas import DispenseSummaryLine, SimulateResult
 
 router = APIRouter(prefix="/simulate")
 
+# Simulated date advances by 1 each time /advance-day is called.
+# Starts at None; first call sets it to date.today() + 1.
+_sim_date: date | None = None
+
+
+def current_sim_date() -> date:
+    """Current simulated date; equals today() until advance-day has been called."""
+    return _sim_date if _sim_date is not None else date.today()
+
 
 @router.post("/advance-day", response_model=SimulateResult)
 def advance_day(db: Session = Depends(get_db)):
-    today = date.today()
+    global _sim_date
+    _sim_date = (date.today() + timedelta(days=1)) if _sim_date is None else (_sim_date + timedelta(days=1))
+    today = _sim_date
 
     plans = (
         db.execute(
@@ -91,6 +102,7 @@ def advance_day(db: Session = Depends(get_db)):
                     "cycle": plan.current_cycle,
                     "next_due_date": str(plan.next_due_date),
                     "status": plan.status.value,
+                    "sim_date": today.isoformat(),
                 },
             )
         )
