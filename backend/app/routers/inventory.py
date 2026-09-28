@@ -3,7 +3,7 @@ from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import func, select
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, selectinload
 
 from app.database import get_db
 from app.models import Actor, AuditLog, Batch, Item, StockTxn, TxnReason
@@ -97,7 +97,11 @@ def _write_audit(db: Session, action: str, entity: str, entity_id: int, after: d
 
 @router.get("/items", response_model=list[ItemListOut])
 def list_items(db: Session = Depends(get_db)):
-    items = db.execute(select(Item)).scalars().all()
+    items = (
+        db.execute(select(Item).options(selectinload(Item.supplier)))
+        .scalars()
+        .all()
+    )
     result = []
     for item in items:
         total_stock = (
@@ -117,6 +121,7 @@ def list_items(db: Session = Depends(get_db)):
                 total_stock=int(total_stock),
                 status=_stockout_status(days),
                 days_until_stockout=round(days, 1) if days is not None else None,
+                default_supplier_name=item.supplier.name if item.supplier else None,
             )
         )
     return result

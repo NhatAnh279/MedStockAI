@@ -212,6 +212,9 @@ class PurchaseOrder(Base):
     created_by: Mapped[POCreator] = mapped_column(enum_col(POCreator))
     total: Mapped[float] = mapped_column(Numeric(16, 2), default=0)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    supplier_reply: Mapped[str | None] = mapped_column(Text)  # raw supplier email text
+    reply_parsed: Mapped[dict | None] = mapped_column(JSON)  # structured confirmation
+    backup_of_po_id: Mapped[int | None] = mapped_column(ForeignKey("purchase_orders.id"))
 
     supplier: Mapped[Supplier] = relationship()
     lines: Mapped[list["POLine"]] = relationship(back_populates="po")

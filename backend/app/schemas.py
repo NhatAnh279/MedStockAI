@@ -3,7 +3,7 @@ from typing import Optional
 
 from pydantic import BaseModel
 
-from app.models import ItemType, TxnReason
+from app.models import ItemType, POCreator, POStatus, TxnReason
 
 
 class BatchOut(BaseModel):
@@ -24,6 +24,7 @@ class ItemListOut(BaseModel):
     total_stock: int
     status: str  # adequate | low | critical
     days_until_stockout: Optional[float]
+    default_supplier_name: Optional[str]
 
 
 class ItemDetailOut(BaseModel):
@@ -85,3 +86,88 @@ class SimulateResult(BaseModel):
     plans_processed: int
     lines_dispensed: list[DispenseSummaryLine]
     total_qty_dispensed: int
+
+
+class SupplierBrief(BaseModel):
+    id: int
+    name: str
+    email: Optional[str]
+    phone: Optional[str]
+    contact_person: Optional[str]
+    lead_time_days: int
+    payment_terms: Optional[str]
+
+    model_config = {"from_attributes": True}
+
+
+class POLineOut(BaseModel):
+    id: int
+    item_id: int
+    item_name: str
+    qty: int
+    unit_price: float
+    line_total: float
+    rationale: Optional[str]
+
+
+class POOut(BaseModel):
+    id: int
+    supplier: SupplierBrief
+    status: POStatus
+    created_by: POCreator
+    total: float
+    line_count: int
+    created_at: datetime
+    lines: list[POLineOut]
+    supplier_reply: Optional[str]
+    reply_parsed: Optional[dict]
+    backup_of_po_id: Optional[int]
+    backup_po_id: Optional[int]  # PO auto-created for a partial/short delivery
+
+
+class POListItem(BaseModel):
+    id: int
+    supplier_id: int
+    supplier_name: str
+    status: POStatus
+    created_by: POCreator
+    total: float
+    line_count: int
+    created_at: datetime
+    backup_of_po_id: Optional[int]
+
+
+class GenerateResult(BaseModel):
+    created: int
+    po_ids: list[int]
+    skipped_items: list[str]  # already on an open PO, or no supplier
+    pos: list[POListItem]
+
+
+class ReceiveResult(BaseModel):
+    po: POOut
+    units_received: int
+
+
+# ── Forecast ──────────────────────────────────────────────────────────────────
+
+
+class DemandBreakdown(BaseModel):
+    A_scheduled: float
+    B_baseline: float
+    C_new_intake: float
+    total: float
+
+
+class ForecastItemOut(BaseModel):
+    item_id: int
+    item_name: str
+    horizon_days: int
+    demand: DemandBreakdown
+    usable_stock: float
+    qty_on_order: float
+    ROP: float
+    order_qty: int
+    days_until_stockout: Optional[float]
+    needs_order: bool
+    rationale_data: dict  # contributing_patients, baseline_figure, new_intake_rate, expiring_batches_excluded

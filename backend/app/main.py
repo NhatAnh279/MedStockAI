@@ -5,7 +5,7 @@ from sqlalchemy.orm import Session
 
 from app.config import settings
 from app.database import get_db
-from app.routers import inventory, simulate
+from app.routers import forecast, inventory, orders, simulate
 
 app = FastAPI(title="MedStock AI")
 
@@ -18,6 +18,8 @@ app.add_middleware(
 
 app.include_router(inventory.router, tags=["inventory"])
 app.include_router(simulate.router, tags=["simulate"])
+app.include_router(forecast.router, tags=["forecast"])
+app.include_router(orders.router, tags=["orders"])
 
 
 @app.get("/health")
