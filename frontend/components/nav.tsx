@@ -10,6 +10,8 @@ const LINKS = [
   { href: "/forecast", label: "Forecast" },
   { href: "/orders", label: "Purchase Orders" },
   { href: "/expiring", label: "Expiring" },
+  { href: "/chat", label: "Chat" },
+  { href: "/upload", label: "Protocols" },
   { href: "/simulate", label: "Simulate" },
 ];
 

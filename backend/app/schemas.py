@@ -1,7 +1,7 @@
 from datetime import date, datetime
-from typing import Optional
+from typing import Literal, Optional
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from app.models import ItemType, POCreator, POStatus, TxnReason
 
@@ -171,3 +171,76 @@ class ForecastItemOut(BaseModel):
     days_until_stockout: Optional[float]
     needs_order: bool
     rationale_data: dict  # contributing_patients, baseline_figure, new_intake_rate, expiring_batches_excluded
+
+
+# ── Chat ──────────────────────────────────────────────────────────────────────
+
+
+class ChatTurn(BaseModel):
+    role: Literal["user", "assistant"]
+    content: str
+
+
+class ChatIn(BaseModel):
+    message: str = Field(min_length=1, max_length=2000)
+    history: list[ChatTurn] = Field(default_factory=list, max_length=20)  # earlier turns, session-only
+
+
+class ChatOut(BaseModel):
+    response: str
+    tools_used: list[str]
+
+
+# ── Protocol upload ───────────────────────────────────────────────────────────
+
+
+class ExtractedProtocolItem(BaseModel):
+    item_id: Optional[int]  # inventory item the extracted line was matched to (None = unmatched)
+    item_name: str
+    dosage: str  # as written in the PDF, e.g. "600 mg once daily"
+    qty_per_cycle: int  # base units of the inventory item per patient per cycle
+    dose_per_kg: Optional[float]
+
+
+class ExtractedProtocol(BaseModel):
+    name: str
+    icd_code: str
+    phase: str
+    cycle_length_days: int
+    total_cycles: Optional[int]  # None = ongoing / chronic
+    items: list[ExtractedProtocolItem]
+
+
+class ProtocolPreview(BaseModel):
+    filename: str
+    protocols: list[ExtractedProtocol]
+
+
+class ProtocolItemIn(BaseModel):
+    item_id: int
+    qty_per_cycle: int = Field(ge=1)
+    dose_per_kg: Optional[float] = Field(default=None, gt=0)
+
+
+class ProtocolIn(BaseModel):
+    name: str = Field(min_length=1, max_length=200)
+    icd_code: str = Field(min_length=1, max_length=10)
+    phase: str = Field(min_length=1, max_length=50)
+    cycle_length_days: int = Field(ge=1)
+    total_cycles: Optional[int] = Field(default=None, ge=1)
+    items: list[ProtocolItemIn] = Field(min_length=1)
+
+
+class ProtocolConfirmIn(BaseModel):
+    protocols: list[ProtocolIn] = Field(min_length=1)
+
+
+class SavedProtocol(BaseModel):
+    id: int
+    name: str
+    phase: str
+    item_count: int
+
+
+class ProtocolConfirmOut(BaseModel):
+    saved: list[SavedProtocol]

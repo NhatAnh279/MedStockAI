@@ -17,17 +17,25 @@ log = logging.getLogger(__name__)
 _client = None
 
 
-def _complete(prompt: str, max_tokens: int = 300) -> str | None:
-    """Single-turn completion. Returns None when no key is set or the call fails."""
+def get_client():
+    """Shared Anthropic client, or None when no API key is configured."""
     global _client
     if not settings.anthropic_api_key:
         return None
-    try:
-        if _client is None:
-            import anthropic  # lazy: optional dependency
+    if _client is None:
+        import anthropic  # lazy: optional dependency
 
-            _client = anthropic.Anthropic(api_key=settings.anthropic_api_key)
-        msg = _client.messages.create(
+        _client = anthropic.Anthropic(api_key=settings.anthropic_api_key, timeout=90.0)
+    return _client
+
+
+def _complete(prompt: str, max_tokens: int = 300) -> str | None:
+    """Single-turn completion. Returns None when no key is set or the call fails."""
+    try:
+        client = get_client()
+        if client is None:
+            return None
+        msg = client.messages.create(
             model=settings.llm_model,
             max_tokens=max_tokens,
             messages=[{"role": "user", "content": prompt}],
