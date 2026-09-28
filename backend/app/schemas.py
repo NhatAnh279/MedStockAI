@@ -88,6 +88,17 @@ class SimulateResult(BaseModel):
     total_qty_dispensed: int
 
 
+class StockSnapshotPoint(BaseModel):
+    sim_date: date
+    item_id: int
+    item_name: str
+    qty_on_hand: int
+
+
+class StockHistoryOut(BaseModel):
+    snapshots: list[StockSnapshotPoint]
+
+
 class SupplierBrief(BaseModel):
     id: int
     name: str

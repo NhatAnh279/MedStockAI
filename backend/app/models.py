@@ -234,6 +234,17 @@ class POLine(Base):
     item: Mapped[Item] = relationship()
 
 
+class StockSnapshot(Base):
+    __tablename__ = "stock_snapshots"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    sim_date: Mapped[date] = mapped_column(Date, index=True)
+    item_id: Mapped[int] = mapped_column(ForeignKey("items.id"), index=True)
+    qty_on_hand: Mapped[int] = mapped_column(Integer)
+
+    item: Mapped["Item"] = relationship()
+
+
 class ForecastRun(Base):
     __tablename__ = "forecast_runs"
 

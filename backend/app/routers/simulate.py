@@ -2,22 +2,24 @@ import math
 from datetime import date, timedelta
 
 from fastapi import APIRouter, Depends
-from sqlalchemy import select
-from sqlalchemy.orm import Session
+from sqlalchemy import func, select
+from sqlalchemy.orm import Session, selectinload
 
 from app.database import get_db
 from app.models import (
     Actor,
     AuditLog,
+    Batch,
     Item,
     Patient,
     PlanStatus,
     Protocol,
     ProtocolItem,
+    StockSnapshot,
     TreatmentPlan,
 )
 from app.routers.inventory import fefo_dispense
-from app.schemas import DispenseSummaryLine, SimulateResult
+from app.schemas import DispenseSummaryLine, SimulateResult, StockHistoryOut, StockSnapshotPoint
 
 router = APIRouter(prefix="/simulate")
 
@@ -109,9 +111,66 @@ def advance_day(db: Session = Depends(get_db)):
 
     db.commit()
 
+    # Save stock snapshot for every item at this simulated date
+    stock_rows = db.execute(
+        select(Item.id, func.coalesce(func.sum(Batch.qty_on_hand), 0).label("total"))
+        .outerjoin(Batch, Batch.item_id == Item.id)
+        .group_by(Item.id)
+    ).all()
+    for row in stock_rows:
+        existing = db.execute(
+            select(StockSnapshot).where(
+                StockSnapshot.sim_date == today, StockSnapshot.item_id == row.id
+            )
+        ).scalar_one_or_none()
+        if existing:
+            existing.qty_on_hand = row.total
+        else:
+            db.add(StockSnapshot(sim_date=today, item_id=row.id, qty_on_hand=row.total))
+    db.commit()
+
     return SimulateResult(
         date_processed=today,
         plans_processed=len(plans),
         lines_dispensed=lines_dispensed,
         total_qty_dispensed=sum(l.qty_dispensed for l in lines_dispensed),
+    )
+
+
+@router.get("/history", response_model=StockHistoryOut)
+def stock_history(db: Session = Depends(get_db)):
+    """Last 30 simulated-date snapshots for every tracked item."""
+    dates = (
+        db.execute(
+            select(StockSnapshot.sim_date)
+            .distinct()
+            .order_by(StockSnapshot.sim_date.desc())
+            .limit(30)
+        )
+        .scalars()
+        .all()
+    )
+    if not dates:
+        return StockHistoryOut(snapshots=[])
+
+    snapshots = (
+        db.execute(
+            select(StockSnapshot)
+            .options(selectinload(StockSnapshot.item))
+            .where(StockSnapshot.sim_date.in_(dates))
+            .order_by(StockSnapshot.sim_date, StockSnapshot.item_id)
+        )
+        .scalars()
+        .all()
+    )
+    return StockHistoryOut(
+        snapshots=[
+            StockSnapshotPoint(
+                sim_date=s.sim_date,
+                item_id=s.item_id,
+                item_name=s.item.name,
+                qty_on_hand=s.qty_on_hand,
+            )
+            for s in snapshots
+        ]
     )

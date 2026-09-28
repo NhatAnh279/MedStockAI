@@ -146,6 +146,17 @@ export interface SimulateResult {
   total_qty_dispensed: number;
 }
 
+export interface StockSnapshotPoint {
+  sim_date: string;
+  item_id: number;
+  item_name: string;
+  qty_on_hand: number;
+}
+
+export interface StockHistoryOut {
+  snapshots: StockSnapshotPoint[];
+}
+
 export interface ChatTurn {
   role: "user" | "assistant";
   content: string;
@@ -227,6 +238,7 @@ export const api = {
     request<ReceiveResult>(`/purchase-orders/${id}/receive`, { method: "POST" }),
   advanceDay: () =>
     request<SimulateResult>("/simulate/advance-day", { method: "POST" }),
+  stockHistory: () => request<StockHistoryOut>("/simulate/history"),
   chat: (message: string, history: ChatTurn[]) =>
     request<ChatResult>("/chat", {
       method: "POST",
