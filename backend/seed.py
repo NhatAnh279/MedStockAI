@@ -98,7 +98,11 @@ ITEMS = [
     ("LANCET", "Lancet", C, "each", 100, 500, 0.09, 1825, "ch2"),
     ("ALCOHOL", "Alcohol swab", C, "swab", 200, 1000, 0.04, 1095, "api"),
     ("N95", "N95 respirator", C, "each", 20, 100, 2.40, 1095, "api"),
+    ("PARA", "Paracetamol 500mg", D, "tablet", 100, 100, 0.04, 730, "sig"),
 ]
+
+# Items seeded with explicit QR-demo batches instead of the 90-day simulation.
+QR_DEMO_ITEMS = {"PARA"}
 
 # key -> (name, icd, phase, cycle_days, total_cycles, [(item_code, qty_per_cycle, dose_per_kg)])
 PROTOCOLS = {
@@ -380,6 +384,10 @@ def simulate_item(s, item, code, per_day):
 def seed_stock(s, items, demand):
     all_lots, all_receives = {}, {}
     for code, item in items.items():
+        if code in QR_DEMO_ITEMS:
+            all_lots[code] = []   # explicit batches seeded separately
+            all_receives[code] = []
+            continue
         all_lots[code], all_receives[code] = simulate_item(s, item, code, demand[code])
 
     for code in NEAR_EXPIRY:
@@ -458,6 +466,24 @@ def seed_purchasing(s, suppliers, items, all_lots, all_receives, demand):
     return ai_pos, sent, confirmed, on_hand, rate30, cover
 
 
+def seed_qr_demo_batches(s, items):
+    """Create the two named Paracetamol batches used for the QR / FEFO demo."""
+    para = items["PARA"]
+    received_at = datetime.combine(date(2024, 6, 1), time(9, 0), tzinfo=UTC)
+    # LOT-PARA-2024-B expires sooner — FEFO will pick it first while it is still valid
+    b_sooner = m.Batch(item=para, lot_no="LOT-PARA-2024-B", qty_on_hand=200,
+                       expiry_date=date(2026, 12, 15), received_at=received_at)
+    b_later  = m.Batch(item=para, lot_no="LOT-PARA-2024-A", qty_on_hand=500,
+                       expiry_date=date(2027, 6, 30), received_at=received_at)
+    s.add_all([b_sooner, b_later])
+    s.flush()
+    s.add(m.StockTxn(item=para, batch=b_sooner, qty_delta=200, reason=m.TxnReason.receive,
+                     created_at=received_at))
+    s.add(m.StockTxn(item=para, batch=b_later,  qty_delta=500, reason=m.TxnReason.receive,
+                     created_at=received_at))
+    s.flush()
+
+
 def seed_forecast_audit(s, items, ai_pos, sent, confirmed, on_hand, rate30, cover):
     snapshot = {
         "source": "seed-baseline (30-day moving average of dispense history)",
@@ -496,6 +522,7 @@ def main() -> None:
         protocols = seed_protocols(s, items)
         demand = seed_patients(s, protocols, items)
         all_lots, all_receives = seed_stock(s, items, demand)
+        seed_qr_demo_batches(s, items)
         po_out = seed_purchasing(s, suppliers, items, all_lots, all_receives, demand)
         seed_forecast_audit(s, items, *po_out)
         s.commit()
