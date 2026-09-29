@@ -48,6 +48,7 @@ export default function InventoryPage() {
                 <Th>Status</Th>
                 <Th right>Days Until Stockout</Th>
                 <Th>Default Supplier</Th>
+                <Th></Th>
               </tr>
             </thead>
             <tbody className="divide-y">
@@ -80,6 +81,16 @@ export default function InventoryPage() {
                   </Td>
                   <Td>
                     {item.default_supplier_name ?? <span className="text-muted-foreground">—</span>}
+                  </Td>
+                  <Td>
+                    <a
+                      href={`/scan/display?item_id=${item.id}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-xs text-muted-foreground hover:text-foreground underline underline-offset-2 whitespace-nowrap"
+                    >
+                      Show QR
+                    </a>
                   </Td>
                 </tr>
               ))}
