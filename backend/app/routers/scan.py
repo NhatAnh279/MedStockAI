@@ -233,6 +233,7 @@ def log_scan_txn(body: ScanLogIn, db: Session = Depends(get_db)):
     db.flush()
     for txn in txns:
         txn.department = body.department
+        txn.actor = body.actor
         txn.anomaly_status = body.anomaly_status
         txn.anomaly_message = body.anomaly_message
         txn.dispense_reason = body.dispense_reason
@@ -268,7 +269,7 @@ def recent_txns(limit: int = Query(50, ge=1, le=200), db: Session = Depends(get_
             lot_no=lot_no,
             qty_delta=txn.qty_delta,
             department=txn.department,
-            user="Staff",
+            user=txn.actor or "Staff",
             anomaly_status=txn.anomaly_status,
             anomaly_message=txn.anomaly_message,
             dispense_reason=txn.dispense_reason,

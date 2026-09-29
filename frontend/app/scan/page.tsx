@@ -33,6 +33,7 @@ function ScanContent() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  const [actor, setActor] = useState("");
   const [department, setDepartment] = useState("Pharmacy");
   const [action, setAction] = useState<Action>("dispense");
   const [qty, setQty] = useState(1);
@@ -111,6 +112,7 @@ function ScanContent() {
           qty,
           action,
           department,
+          actor: actor.trim() || undefined,
           anomaly_status: anomalyResult.status,
           anomaly_message: anomalyResult.message,
           dispense_reason: overrideReason || undefined,
@@ -202,6 +204,18 @@ function ScanContent() {
         </div>
       )}
 
+      {/* Staff Name */}
+      <div>
+        <label className="block text-sm font-medium mb-2">Staff Name</label>
+        <input
+          type="text"
+          value={actor}
+          onChange={(e) => setActor(e.target.value)}
+          placeholder="Enter your name"
+          className="w-full rounded-lg border border-input bg-background px-3 py-3 text-base focus:outline-none focus:ring-2 focus:ring-ring"
+        />
+      </div>
+
       {/* Department selector */}
       <div>
         <label className="block text-sm font-medium mb-2">Department</label>
@@ -265,7 +279,7 @@ function ScanContent() {
       {/* Confirm button */}
       <button
         onClick={handleConfirm}
-        disabled={checking || logging || !activeBatch}
+        disabled={checking || logging || !activeBatch || !actor.trim()}
         className="w-full py-4 rounded-xl bg-primary text-primary-foreground text-lg font-semibold disabled:opacity-50 active:scale-[0.98] transition-transform"
       >
         {logging ? "Saving…" : `Confirm ${action.charAt(0).toUpperCase() + action.slice(1)}`}

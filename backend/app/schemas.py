@@ -281,6 +281,7 @@ class ScanLogIn(BaseModel):
     qty: int = Field(ge=1)
     action: str  # "dispense" | "receive" | "waste"
     department: str
+    actor: Optional[str] = None
     anomaly_status: Optional[str] = None
     anomaly_message: Optional[str] = None
     dispense_reason: Optional[str] = None
