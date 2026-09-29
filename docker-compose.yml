@@ -34,6 +34,7 @@ services:
 
   frontend:
     build: ./frontend
+    command: sh -c "npm run dev -- -H 0.0.0.0 -p 3000"
     environment:
       NEXT_PUBLIC_API_URL: http://localhost:8000
       WATCHPACK_POLLING: "true"
