@@ -185,9 +185,13 @@ def get_stock_transactions(db: Session, item_name: str, days: int = 30) -> dict[
             "summary_by_reason": summary,
             "transactions": [
                 {
-                    "date": t.created_at.date().isoformat(),
+                    "date": t.created_at.isoformat(),
                     "reason": t.reason.value,
                     "qty_delta": t.qty_delta,
+                    "actor": t.actor,
+                    "department": t.department,
+                    "dispense_reason": t.dispense_reason,
+                    "anomaly_status": t.anomaly_status,
                 }
                 for t in txns[:50]
             ],
@@ -815,7 +819,8 @@ TOOLS = [
     _schema(
         "get_stock_transactions",
         "Recent stock transaction history for an item: dispenses, receives, waste adjustments. "
-        "Useful for 'how fast are we using X' or 'when did we last receive Y'.",
+        "Each transaction includes actor (staff name), department, and dispense_reason. "
+        "Useful for 'how fast are we using X', 'when did we last receive Y', or 'who dispensed Z'.",
         {
             "item_name": {**_STR, "description": "Item name or part of it."},
             "days": {**_INT, "description": "Look-back window in days (default 30)."},
