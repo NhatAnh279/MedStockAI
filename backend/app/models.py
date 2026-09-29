@@ -131,6 +131,10 @@ class StockTxn(Base):
     qty_delta: Mapped[int] = mapped_column(Integer)  # negative = stock out
     reason: Mapped[TxnReason] = mapped_column(enum_col(TxnReason))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), index=True)
+    department: Mapped[str | None] = mapped_column(String(100))
+    anomaly_status: Mapped[str | None] = mapped_column(String(20))
+    anomaly_message: Mapped[str | None] = mapped_column(Text)
+    dispense_reason: Mapped[str | None] = mapped_column(Text)
 
     item: Mapped[Item] = relationship()
     batch: Mapped[Batch | None] = relationship()

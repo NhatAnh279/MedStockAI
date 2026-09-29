@@ -255,3 +255,54 @@ class SavedProtocol(BaseModel):
 
 class ProtocolConfirmOut(BaseModel):
     saved: list[SavedProtocol]
+
+
+# ── QR / Scan ─────────────────────────────────────────────────────────────────
+
+
+class AnomalyCheckIn(BaseModel):
+    item_id: int
+    batch_id: Optional[int] = None
+    qty: int = Field(ge=1)
+    action: str  # "dispense" | "receive" | "waste"
+    department: str
+
+
+class AnomalyCheckOut(BaseModel):
+    status: str  # "normal" | "warning" | "alert"
+    reason_code: str
+    message: str
+    requires_reason: bool
+
+
+class ScanLogIn(BaseModel):
+    item_id: int
+    batch_id: Optional[int] = None
+    qty: int = Field(ge=1)
+    action: str  # "dispense" | "receive" | "waste"
+    department: str
+    anomaly_status: Optional[str] = None
+    anomaly_message: Optional[str] = None
+    dispense_reason: Optional[str] = None
+
+
+class ScanLogOut(BaseModel):
+    id: int
+    qty_delta: int
+    created_at: datetime
+
+
+class RecentTxnOut(BaseModel):
+    id: int
+    created_at: datetime
+    reason: str
+    item_id: int
+    item_name: str
+    batch_id: Optional[int]
+    lot_no: Optional[str]
+    qty_delta: int
+    department: Optional[str]
+    user: str
+    anomaly_status: Optional[str]
+    anomaly_message: Optional[str]
+    dispense_reason: Optional[str]

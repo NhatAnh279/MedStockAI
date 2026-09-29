@@ -20,6 +20,10 @@ services:
     environment:
       DATABASE_URL: postgresql+psycopg2://medstock:medstock@db:5432/medstock
       CORS_ORIGINS: http://localhost:3000
+      # Set to your LAN IP so QR codes work on devices connected to the same WiFi.
+      # e.g. NETWORK_HOST: 192.168.1.10
+      # Leave as "auto" to detect at runtime (works for localhost testing).
+      NETWORK_HOST: ${NETWORK_HOST:-auto}
     ports:
       - "8000:8000"
     volumes:

@@ -12,6 +12,8 @@ class Settings(BaseSettings):
     llm_model: str = "claude-haiku-4-5-20251001"
     # NL chat and protocol-PDF extraction (tool calling / document reading).
     chat_model: str = "claude-sonnet-4-6"
+    # LAN IP for QR codes — "auto" detects at runtime, or set explicitly e.g. "192.168.1.10"
+    network_host: str = "auto"
 
 
 settings = Settings()

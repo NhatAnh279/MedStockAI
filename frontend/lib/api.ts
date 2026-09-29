@@ -221,6 +221,56 @@ export function errorMessage(e: unknown): string {
   return raw;
 }
 
+// ── QR / Scan / History types ─────────────────────────────────────────────────
+
+export interface AnomalyCheckIn {
+  item_id: number;
+  batch_id?: number;
+  qty: number;
+  action: "dispense" | "receive" | "waste";
+  department: string;
+}
+
+export interface AnomalyCheckOut {
+  status: "normal" | "warning" | "alert";
+  reason_code: string;
+  message: string;
+  requires_reason: boolean;
+}
+
+export interface ScanLogIn {
+  item_id: number;
+  batch_id?: number;
+  qty: number;
+  action: "dispense" | "receive" | "waste";
+  department: string;
+  anomaly_status?: string;
+  anomaly_message?: string;
+  dispense_reason?: string;
+}
+
+export interface ScanLogOut {
+  id: number;
+  qty_delta: number;
+  created_at: string;
+}
+
+export interface RecentTxnOut {
+  id: number;
+  created_at: string;
+  reason: string;
+  item_id: number;
+  item_name: string;
+  batch_id: number | null;
+  lot_no: string | null;
+  qty_delta: number;
+  department: string | null;
+  user: string;
+  anomaly_status: string | null;
+  anomaly_message: string | null;
+  dispense_reason: string | null;
+}
+
 export const api = {
   items: () => request<ItemListOut[]>("/items"),
   item: (id: number) => request<ItemDetailOut>(`/items/${id}`),
@@ -269,4 +319,6 @@ export const api = {
         })),
       }),
     }),
+  recentTxns: (limit = 50) =>
+    request<RecentTxnOut[]>(`/stock-txns/recent?limit=${limit}`),
 };
