@@ -4,14 +4,6 @@ import { Suspense, useEffect, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import type { AnomalyCheckOut, ItemDetailOut } from "@/lib/api";
 
-// Use the device's hostname so QR → scan works from any device on the LAN
-function scanApiBase(): string {
-  if (typeof window !== "undefined") {
-    return `${window.location.protocol}//${window.location.hostname}:8000`;
-  }
-  return process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
-}
-
 const DEPARTMENTS = [
   "Pharmacy",
   "Ward A",
@@ -58,7 +50,7 @@ function ScanContent() {
       setLoading(false);
       return;
     }
-    fetch(`${scanApiBase()}/items/${itemId}`)
+    fetch(`/api/items/${itemId}`)
       .then((r) => {
         if (!r.ok) throw new Error(`${r.status}`);
         return r.json() as Promise<ItemDetailOut>;
@@ -75,7 +67,7 @@ function ScanContent() {
     if (!item) return;
     setChecking(true);
     try {
-      const res = await fetch(`${scanApiBase()}/scan/check-anomaly`, {
+      const res = await fetch(`/api/scan/check-anomaly`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -103,7 +95,7 @@ function ScanContent() {
     if (!item) return;
     setLogging(true);
     try {
-      const res = await fetch(`${scanApiBase()}/scan/log`, {
+      const res = await fetch(`/api/scan/log`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -129,7 +121,7 @@ function ScanContent() {
       setReason("");
       setQty(1);
       // Refresh item stock
-      fetch(`${scanApiBase()}/items/${item.id}`)
+      fetch(`/api/items/${item.id}`)
         .then((r) => r.json())
         .then(setItem)
         .catch(() => {});
