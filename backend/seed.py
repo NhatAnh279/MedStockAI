@@ -467,20 +467,44 @@ def seed_purchasing(s, suppliers, items, all_lots, all_receives, demand):
 
 
 def seed_qr_demo_batches(s, items):
-    """Create the two named Paracetamol batches used for the QR / FEFO demo."""
+    """Create Paracetamol batches and 30 days of usage history for the anomaly engine."""
+    from sqlalchemy import select as sa_select, func as sa_func
     para = items["PARA"]
+
+    # Idempotency guard — skip if batches already exist (e.g. called on a live DB).
+    already = s.execute(sa_select(sa_func.count(m.Batch.id)).where(m.Batch.item_id == para.id)).scalar()
+    if already:
+        return
+
     received_at = datetime.combine(date(2024, 6, 1), time(9, 0), tzinfo=UTC)
-    # LOT-PARA-2024-B expires sooner — FEFO will pick it first while it is still valid
+    # LOT-PARA-2024-B expires sooner — FEFO will pick it first.
     b_sooner = m.Batch(item=para, lot_no="LOT-PARA-2024-B", qty_on_hand=200,
                        expiry_date=date(2026, 12, 15), received_at=received_at)
     b_later  = m.Batch(item=para, lot_no="LOT-PARA-2024-A", qty_on_hand=500,
                        expiry_date=date(2027, 6, 30), received_at=received_at)
     s.add_all([b_sooner, b_later])
     s.flush()
-    s.add(m.StockTxn(item=para, batch=b_sooner, qty_delta=200, reason=m.TxnReason.receive,
-                     created_at=received_at))
-    s.add(m.StockTxn(item=para, batch=b_later,  qty_delta=500, reason=m.TxnReason.receive,
-                     created_at=received_at))
+
+    # ── 30-day history ──────────────────────────────────────────────────────────
+    now = datetime.now(UTC)
+    day_minus_30 = now - timedelta(days=30)
+
+    # Pharmacy initial receive 30 days ago — establishes the stock context.
+    s.add(m.StockTxn(item=para, batch=b_later, qty_delta=1000, reason=m.TxnReason.receive,
+                     department="Pharmacy", created_at=day_minus_30.replace(hour=8, minute=0, second=0)))
+
+    # Daily dispenses over the last 30 days — gives the anomaly engine a clear baseline:
+    #   Ward A  avg = 10 / day  →  dispensing 500 =  50x avg  → warning
+    #   Ward B  avg =  5 / day  →  dispensing 500 = 100x avg  → warning
+    #   ICU     avg =  2 / day  →  dispensing 500 = 250x avg  → warning (or alert)
+    dept_daily = [("Ward A", 10), ("Ward B", 5), ("ICU", 2)]
+    for day_offset in range(30):
+        txn_dt = now - timedelta(days=30 - day_offset)
+        txn_dt = txn_dt.replace(hour=10, minute=0, second=0, microsecond=0)
+        for dept, qty in dept_daily:
+            s.add(m.StockTxn(item=para, batch=b_sooner, qty_delta=-qty, reason=m.TxnReason.dispense,
+                             department=dept, created_at=txn_dt))
+
     s.flush()
 
 
